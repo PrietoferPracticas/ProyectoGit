@@ -1,0 +1,25 @@
+name: Prueba de Self-Hosted Runner y Secrets
+
+on:
+  push:
+
+jobs:
+  comparar-tokens:
+    runs-on: self-hosted
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Comparar DEV_TOKEN con LOCAL_DEV_TOKEN
+        env:
+          DEV_SECRET: ${{ secrets.DEV_TOKEN }}
+        shell: bash
+        run: |
+          echo "Verificando coincidencia de tokens..."
+          if [ "$DEV_SECRET" = "$LOCAL_DEV_TOKEN" ]; then
+            echo " ÉXITO: El secret DEV_TOKEN coincide con la variable LOCAL_DEV_TOKEN"
+            exit 0
+          else
+            echo " ERROR: El secret DEV_TOKEN no coincide con LOCAL_DEV_TOKEN"
+            exit 1
+          fi
