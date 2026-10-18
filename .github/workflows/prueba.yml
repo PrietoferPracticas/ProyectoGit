@@ -1,4 +1,4 @@
-name: Prueba de Self-Hosted Runner y Secrets
+name: Comprobacion de Tokens Local vs Secret
 
 on:
   push:
@@ -6,20 +6,28 @@ on:
 jobs:
   comparar-tokens:
     runs-on: self-hosted
+
     steps:
-      - name: Descargar el código del repositorio
+      - name: Descargar el codigo del repositorio
         uses: actions/checkout@v4
 
-      - name: Comparar DEV_TOKEN con LOCAL_DEV_TOKEN
+      - name: Comparar DEV_TOKEN de GitHub con LOCAL_DEV_TOKEN
         env:
-          DEV_SECRET: ${{ secrets.DEV_TOKEN }}
-        shell: bash
+          DEV_TOKEN_SECRET: ${{ secrets.DEV_TOKEN }}
+        shell: powershell
         run: |
-          echo "Verificando coincidencia de tokens..."
-          if [ "$DEV_SECRET" = "$LOCAL_DEV_TOKEN" ]; then
-            echo " ÉXITO: El secret DEV_TOKEN coincide con la variable LOCAL_DEV_TOKEN"
-            exit 0
-          else
-            echo " ERROR: El secret DEV_TOKEN no coincide con LOCAL_DEV_TOKEN"
-            exit 1
-          fi
+          Write-Host "=== Ejecutando tarea en el Self-Hosted Runner (Windows) ==="
+          
+          # Leemos las variables en PowerShell
+          $localVal = $env:LOCAL_DEV_TOKEN
+          $secretVal = $env:DEV_TOKEN_SECRET
+          
+          Write-Host "Comprobando credenciales..."
+          
+          if ($localVal -and ($localVal -eq $secretVal)) {
+              Write-Host " EXITO: El token local coincide exactamente con el Secret guardado en GitHub."
+              exit 0
+          } else {
+              Write-Host " ERROR: El token local ('$localVal') NO coincide con el Secret ('$secretVal')."
+              exit 1
+          }
