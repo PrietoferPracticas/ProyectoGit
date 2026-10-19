@@ -1,0 +1,63 @@
+name: Pipeline CD (Main)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Incrementar version en README
+        run: |
+          OLD_VER=$(grep -oP 'AppVersion-\d+' README.md | tail -1 || echo "AppVersion-0")
+          NUM=$(echo $OLD_VER | grep -oP '\d+')
+          NEW_NUM=$((NUM + 1))
+          NEW_VER="AppVersion-$NEW_NUM"
+          DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+          if grep -q "AppVersion-" README.md; then
+            sed -i "s/$OLD_VER/$NEW_VER ($DATE)/g" README.md
+          else
+            echo "$NEW_VER ($DATE)" >> README.md
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "chore: incremento de version a $NEW_VER" || echo "Sin cambios"
+          git push || echo "No push needed"
+
+  validate-prod:
+    needs: bump-version
+    runs-on: self-hosted
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Validar PROD_TOKEN
+        env:
+          PROD_TOKEN_SECRET: ${{ secrets.PROD_TOKEN }}
+        shell: powershell
+        run: |
+          Write-Host "=== Validando PROD_TOKEN en Self-Hosted ==="
+          $localVal = $env:LOCAL_PROD_TOKEN
+          $secretVal = $env:PROD_TOKEN_SECRET
+
+          if ($localVal -and ($localVal -eq $secretVal)) {
+              Write-Host " EXITO: PROD_TOKEN coincide correctamente."
+              exit 0
+          } else {
+              Write-Host " ERROR: PROD_TOKEN no coincide."
+              exit 1
+          }
